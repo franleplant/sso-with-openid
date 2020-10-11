@@ -3,7 +3,7 @@ import { Issuer } from "openid-client";
 import { getAuthCookie } from "./cookie";
 
 export function getDomain(): string {
-  return `http://localhost:${process.env.PORT}`;
+  return `http://${process.env.HOST}:${process.env.PORT}`;
 }
 
 /*

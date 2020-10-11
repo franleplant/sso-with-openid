@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node -r dotenv/config ./src/index.ts",
+    "start:client1": "DOTENV_CONFIG_PATH=.env.client1 ts-node -r dotenv/config ./src/index.ts",
+    "start:client2": "DOTENV_CONFIG_PATH=.env.client2 ts-node -r dotenv/config ./src/index.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "echo \"Error: no test specified\" && exit 1"
