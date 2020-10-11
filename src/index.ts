@@ -1,5 +1,5 @@
 /// <reference path="./declarations.d.ts" />
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response} from "express";
 import mustacheExpress from "mustache-express";
 import cookieParser from "cookie-parser";
 
@@ -26,7 +26,7 @@ app.get("/", (req: Request, res: Response) => {
   res.render("index");
 });
 
-app.get("/private", requireAuthMiddleware, (req, res, next) => {
+app.get("/private", requireAuthMiddleware, (req, res) => {
   const claims = req.auth!.session!.tokenSet.claims();
 
   res.render("private", {

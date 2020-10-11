@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction, Router } from "express";
+import { Router } from "express";
 import { IUserInfo } from "../types";
 import { setAuthCookie, clearAuthCookie } from "./cookie";
 import { getDomain } from "./middleware";
