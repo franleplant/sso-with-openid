@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 
 import { Issuer, Client, TokenSet } from "openid-client";
 
-import { IAuthCookie } from "./types";
+import { IAuthCookie, IUserInfo } from "./types";
 
 function getDomain(): string {
   return `http://localhost:${process.env.PORT}`;
@@ -17,11 +17,6 @@ async function authInitMiddleware(
   next: NextFunction
 ) {
   const googleIssuer = await Issuer.discover("https://accounts.google.com");
-  console.log(
-    "Discovered issuer %s %O",
-    googleIssuer.issuer,
-    googleIssuer.metadata
-  );
   req.auth = req.auth || {};
   req.auth.issuer = googleIssuer;
 
@@ -39,14 +34,17 @@ async function authInitMiddleware(
 
 const AUTH_COOKIE = "AUTH";
 
-// TODO user
-function setAuthCookie(req: Request, tokenSet: TokenSet, user: any): void {
+function setAuthCookie(
+  req: Request,
+  tokenSet: TokenSet,
+  user: IUserInfo
+): void {
   const payload: IAuthCookie = { user, tokenSet };
   const value = JSON.stringify(payload);
 
   req.res?.cookie(AUTH_COOKIE, value, {
     httpOnly: true,
-    maxAge: 100000,
+    expires: new Date(new Date().getTime() + 9000000),
   });
 }
 
@@ -56,7 +54,15 @@ function getAuthCookie(req: Request): IAuthCookie | undefined {
     return;
   }
 
-  return JSON.parse(value);
+  const raw = JSON.parse(value);
+  return {
+    ...raw,
+    tokenSet: new TokenSet(raw.tokenSet),
+  };
+}
+
+function clearAuthCookie(req: Request): void {
+  req.res?.clearCookie(AUTH_COOKIE);
 }
 
 async function sessionMiddleware(
@@ -67,6 +73,17 @@ async function sessionMiddleware(
   const session = getAuthCookie(req);
   if (!session) {
     return next();
+  }
+
+  if (session.tokenSet.expired()) {
+    // TODO maybe build getters for these properties that throw?
+    const client = req.auth?.client;
+    if (!client) {
+      throw new Error("ouch");
+    }
+
+    const refreshedTokenSet = await client.refresh(session.tokenSet);
+    session.tokenSet = refreshedTokenSet;
   }
 
   req.auth = req.auth || {};
@@ -80,12 +97,10 @@ async function requireAuthMiddleware(
   res: Response,
   next: NextFunction
 ) {
-
-  const session = req.auth?.session
+  const session = req.auth?.session;
   if (!session) {
-    return next(new Error('unauthenticated'));
+    return next(new Error("unauthenticated"));
   }
-
 
   next();
 }
@@ -105,38 +120,62 @@ app.get("/", (req: Request, res: Response) => {
   res.render("index");
 });
 
-app.get("/private", requireAuthMiddleware, (req: Request, res: Response) => {
-  res.render("private");
+app.get("/private", requireAuthMiddleware, (req, res, next) => {
+  const claims = req.auth!.session!.tokenSet.claims();
+
+  res.render("private", {
+    email: claims.email,
+    picture: claims.picture,
+    name: claims.name,
+  });
 });
 
-app.get("/auth/login", function (req: Request, res: Response) {
+app.get("/auth/login", function (req, res, next) {
   const client = req.auth?.client;
   if (!client) {
-    throw new Error("ouch");
+    return next( new Error("OAuth / OpenId client missing"))
   }
 
   const authUrl = client.authorizationUrl({
-    scope: "openid",
+    scope: "openid email profile",
   });
   res.redirect(authUrl);
 });
 
-app.get("/auth/callback", async (req: Request, res: Response) => {
+app.get("/auth/callback", async (req, res, next) => {
   const client = req.auth?.client;
   if (!client) {
-    throw new Error("ouch");
+    return next( new Error("OAuth / OpenId client missing"))
   }
+
   const params = client.callbackParams(req);
   const tokenSet = await client.callback(
     `${getDomain()}/auth/callback`,
     params
   );
-  console.log("auth callback", tokenSet);
   const user = await client.userinfo(tokenSet);
 
-  setAuthCookie(req, tokenSet, user);
+  setAuthCookie(req, tokenSet, user as IUserInfo);
 
   res.redirect("/private");
+});
+
+app.get("/auth/logout", async (req, res, next) => {
+  const client = req.auth?.client;
+  if (!client) {
+    return next( new Error("OAuth / OpenId client missing"))
+  }
+
+  const tokenSet = req.auth?.session?.tokenSet;
+
+  try {
+    await client.revoke(tokenSet!.access_token!);
+  } catch (err) {
+    console.error("error revoking token", err);
+  }
+  clearAuthCookie(req);
+
+  res.redirect("/");
 });
 
 app.listen(process.env.PORT, () => {
