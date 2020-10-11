@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 app.use(authInitMiddleware);
 app.use(sessionMiddleware);
-app.use(authRoutesMiddleware);
+app.use(authRoutesMiddleware());
 
 app.get("/", (req: Request, res: Response) => {
   res.render("index");
