@@ -3,6 +3,18 @@ import { IUserInfo } from "../types";
 import { setAuthCookie, clearAuthCookie } from "./cookie";
 import { getDomain } from "./middleware";
 
+/*
+  This is a simple middleware that hosts all the routes
+  necessary to manage authentication. In here you are going
+  to see the vital routes:
+  - auth/login which inits the whole oAuth flow
+  - auth/callback which is the thing that the openId provider will call to finish the auth process
+
+
+  We are also including a logout route and others might be included
+  such as a `userinfo` proxy among others.
+
+ */
 export default function authRoutesMiddleware(): Router {
   const router = Router();
 

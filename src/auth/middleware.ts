@@ -6,6 +6,16 @@ export function getDomain(): string {
   return `http://localhost:${process.env.PORT}`;
 }
 
+/*
+
+Initialice two main things: the OpenId issuer and client,
+these will be necessary for session management as
+well as for authentication.
+
+This is a direct dependency of the rest of the auth middlewares.
+
+
+ */
 export async function authInitMiddleware(
   req: Request,
   res: Response,
@@ -27,6 +37,14 @@ export async function authInitMiddleware(
   next();
 }
 
+/*
+
+  This middleware deals with sessions, which involves
+  - turning the auth cookie into a valid session object
+  - storing that session object in req.auth.session for other parts of the app to use
+  - refreshing the access_token if necessary
+
+ */
 export async function sessionMiddleware(
   req: Request,
   res: Response,
@@ -54,6 +72,14 @@ export async function sessionMiddleware(
   next();
 }
 
+/*
+  Helper middleware to protect certain routes.
+  This will make those routes to be accessible only
+  by already authenticated users.
+
+  This is a very primitive version, a more complex one should.
+  accept params like `if unauthenticated redirect to ...`
+ */
 export async function requireAuthMiddleware(
   req: Request,
   res: Response,
