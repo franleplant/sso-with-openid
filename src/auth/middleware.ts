@@ -21,10 +21,12 @@ export async function authInitMiddleware(
   res: Response,
   next: NextFunction
 ) {
-  const googleIssuer = await Issuer.discover("https://accounts.google.com");
-  req.auth = req.auth || {};
-  req.auth.issuer = googleIssuer;
+  if (req.app.authIssuer) {
+    return next();
+  }
 
+  const googleIssuer = await Issuer.discover("https://accounts.google.com");
+  console.log("OpendId issuer created", googleIssuer.metadata);
   const client = new googleIssuer.Client({
     client_id: process.env.OAUTH_CLIENT_ID!,
     client_secret: process.env.OAUTH_CLIENT_SECRET!,
@@ -32,7 +34,12 @@ export async function authInitMiddleware(
     response_types: ["code"],
   });
 
-  req.auth.client = client;
+  const ks = await googleIssuer.keystore();
+  const k1 = ks.toJWKS();
+  console.log("keyStore ", ks, k1);
+
+  req.app.authIssuer = googleIssuer;
+  req.app.authClient = client;
 
   next();
 }
@@ -51,23 +58,37 @@ export async function sessionMiddleware(
   next: NextFunction
 ) {
   const session = getAuthCookie(req);
+
+  const client = req.app.authClient;
+  // This is unfortunately a private method for some reason,
+  // The idea here is to use the metadata the issuer fetched like
+  // encryption algorithms and public keys to validate that
+  // the idToken's signature, meaning that we validate that it was issued
+  // by our real openId identity provider.
+  // We also need to do this because when the TokenSet is instanciated "by hand"
+  // there are no validations performed by the lib.
+  const validate = req.app.authClient?.validateIdToken as any;
+  // due to javascript weirdness this class method needs to be called this way
+  // so that it is aware of its own `this`
+  try {
+    const result = await validate.call(client, session?.tokenSet);
+  } catch (err) {
+    console.log("bad token signature found in auth cookie");
+    return next(new Error("Bad Token in Auth Cookie!"));
+  }
+
   if (!session) {
     return next();
   }
 
   if (session.tokenSet.expired()) {
-    // TODO maybe build getters for these properties that throw?
-    const client = req.auth?.client;
-    if (!client) {
-      return next(new Error("OAuth / OpenId client missing"));
-    }
-
-    const refreshedTokenSet = await client.refresh(session.tokenSet);
+    const refreshedTokenSet = await req.app.authClient!.refresh(
+      session.tokenSet
+    );
     session.tokenSet = refreshedTokenSet;
   }
 
-  req.auth = req.auth || {};
-  req.auth.session = session;
+  req.session = session;
 
   next();
 }
@@ -85,7 +106,7 @@ export async function requireAuthMiddleware(
   res: Response,
   next: NextFunction
 ) {
-  const session = req.auth?.session;
+  const session = req.session;
   if (!session) {
     return next(new Error("unauthenticated"));
   }

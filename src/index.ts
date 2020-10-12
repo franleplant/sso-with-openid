@@ -1,5 +1,5 @@
 /// <reference path="./declarations.d.ts" />
-import express, { Request, Response} from "express";
+import express, { Request, Response } from "express";
 import mustacheExpress from "mustache-express";
 import cookieParser from "cookie-parser";
 
@@ -25,7 +25,7 @@ console.log(`
  PORT: ${process.env.PORT}
  OAUTH_CLIENT_ID: ${process.env.OAUTH_CLIENT_ID}
  OAUTH_CLIENT_secret: ${process.env.OAUTH_CLIENT_SECRET}
-`)
+`);
 
 const app = express();
 
@@ -44,7 +44,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.get("/private", requireAuthMiddleware, (req, res) => {
-  const claims = req.auth!.session!.tokenSet.claims();
+  const claims = req.session!.tokenSet.claims();
 
   res.render("private", {
     email: claims.email,

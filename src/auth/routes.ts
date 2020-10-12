@@ -19,29 +19,21 @@ export default function authRoutesMiddleware(): Router {
   const router = Router();
 
   router.get("/auth/login", function (req, res, next) {
-    const client = req.auth?.client;
-    if (!client) {
-      return next(new Error("OAuth / OpenId client missing"));
-    }
-
-    const authUrl = client.authorizationUrl({
+    const authUrl = req.app.authClient!.authorizationUrl({
       scope: "openid email profile",
     });
     res.redirect(authUrl);
   });
 
   router.get("/auth/callback", async (req, res, next) => {
-    const client = req.auth?.client;
-    if (!client) {
-      return next(new Error("OAuth / OpenId client missing"));
-    }
+    const client = req.app.authClient;
 
-    const params = client.callbackParams(req);
-    const tokenSet = await client.callback(
+    const params = client!.callbackParams(req);
+    const tokenSet = await client!.callback(
       `${getDomain()}/auth/callback`,
       params
     );
-    const user = await client.userinfo(tokenSet);
+    const user = await client!.userinfo(tokenSet);
 
     setAuthCookie(req, tokenSet, user as IUserInfo);
 
@@ -49,15 +41,11 @@ export default function authRoutesMiddleware(): Router {
   });
 
   router.get("/auth/logout", async (req, res, next) => {
-    const client = req.auth?.client;
-    if (!client) {
-      return next(new Error("OAuth / OpenId client missing"));
-    }
-
-    const tokenSet = req.auth?.session?.tokenSet;
+    const client = req.app.authClient;
+    const tokenSet = req.session?.tokenSet;
 
     try {
-      await client.revoke(tokenSet!.access_token!);
+      await client!.revoke(tokenSet!.access_token!);
     } catch (err) {
       console.error("error revoking token", err);
     }
