@@ -26,17 +26,13 @@ export async function authInitMiddleware(
   }
 
   const googleIssuer = await Issuer.discover("https://accounts.google.com");
-  console.log("OpendId issuer created", googleIssuer.metadata);
+  console.log("OpendId issuer created");
   const client = new googleIssuer.Client({
     client_id: process.env.OAUTH_CLIENT_ID!,
     client_secret: process.env.OAUTH_CLIENT_SECRET!,
     redirect_uris: [`${getDomain()}/auth/callback`],
     response_types: ["code"],
   });
-
-  const ks = await googleIssuer.keystore();
-  const k1 = ks.toJWKS();
-  console.log("keyStore ", ks, k1);
 
   req.app.authIssuer = googleIssuer;
   req.app.authClient = client;
