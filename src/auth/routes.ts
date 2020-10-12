@@ -21,10 +21,8 @@ export default function authRoutesMiddleware(): Router {
 
   router.get("/auth/login", function (req, res, next) {
     const backTo = req.query.backTo;
-    console.log("login backTo", backTo);
     const authUrl = req.app.authClient!.authorizationUrl({
       scope: "openid email profile",
-      backTo,
     });
 
     res.cookie(BACKTO_COOKIE, backTo);
