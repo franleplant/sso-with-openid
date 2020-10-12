@@ -84,6 +84,7 @@ export async function session(req: Request, res: Response, next: NextFunction) {
     } catch (err) {
       // this can throw when the refresh token has expired, logout completely when that happens
       clearSessionCookie(req);
+      return next()
     }
   }
 
