@@ -1,3 +1,4 @@
+
 import { TokenSet } from "openid-client";
 
 export interface IUserInfo {
@@ -11,7 +12,7 @@ export interface IUserInfo {
   locale: string;
 }
 
-export interface IAuthCookie {
-  user: any;
+export interface ISession {
+  user: IUserInfo;
   tokenSet: TokenSet;
 }

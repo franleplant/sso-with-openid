@@ -1,6 +1,6 @@
 import { Request } from "express";
 import { TokenSet } from "openid-client";
-import { IAuthCookie, IUserInfo } from "../types";
+import { ISession, IUserInfo } from "./types";
 
 /*
 
@@ -25,7 +25,7 @@ export function setAuthCookie(
   tokenSet: TokenSet,
   user: IUserInfo
 ): void {
-  const payload: IAuthCookie = { user, tokenSet };
+  const payload: ISession = { user, tokenSet };
   const value = JSON.stringify(payload);
 
   req.res?.cookie(AUTH_COOKIE, value, {
@@ -34,7 +34,7 @@ export function setAuthCookie(
   });
 }
 
-export function getAuthCookie(req: Request): IAuthCookie | undefined {
+export function getAuthCookie(req: Request): ISession | undefined {
   const value = req.cookies[AUTH_COOKIE];
   if (!value) {
     return;

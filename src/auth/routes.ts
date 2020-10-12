@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { IUserInfo } from "../types";
+import { IUserInfo } from "./types";
 import { setAuthCookie, clearAuthCookie } from "./cookie";
 import { getDomain } from "./middleware";
 
