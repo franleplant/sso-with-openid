@@ -58,6 +58,9 @@ export async function sessionMiddleware(
   next: NextFunction
 ) {
   const session = getAuthCookie(req);
+  if (!session) {
+    return next();
+  }
 
   const client = req.app.authClient;
   // This is unfortunately a private method for some reason,
@@ -71,15 +74,12 @@ export async function sessionMiddleware(
   // due to javascript weirdness this class method needs to be called this way
   // so that it is aware of its own `this`
   try {
-    const result = await validate.call(client, session?.tokenSet);
+    const result = await validate.call(client, session.tokenSet);
   } catch (err) {
     console.log("bad token signature found in auth cookie");
     return next(new Error("Bad Token in Auth Cookie!"));
   }
 
-  if (!session) {
-    return next();
-  }
 
   if (session.tokenSet.expired()) {
     const refreshedTokenSet = await req.app.authClient!.refresh(
