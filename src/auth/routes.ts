@@ -17,15 +17,22 @@ import { getDomain } from "./middleware";
  */
 export default function authRoutesMiddleware(): Router {
   const router = Router();
+  const BACKTO_COOKIE = "backTo";
 
   router.get("/auth/login", function (req, res, next) {
+    const backTo = req.query.backTo;
+    console.log("login backTo", backTo);
     const authUrl = req.app.authClient!.authorizationUrl({
       scope: "openid email profile",
+      backTo,
     });
+
+    res.cookie(BACKTO_COOKIE, backTo);
     res.redirect(authUrl);
   });
 
   router.get("/auth/callback", async (req, res, next) => {
+    const backTo = req.cookies[BACKTO_COOKIE] || "/private";
     const client = req.app.authClient;
 
     const params = client!.callbackParams(req);
@@ -38,7 +45,7 @@ export default function authRoutesMiddleware(): Router {
     const sessionCookie = serialize({ tokenSet, user });
     setSessionCookie(req, sessionCookie);
 
-    res.redirect("/private");
+    res.redirect(backTo);
   });
 
   router.get("/auth/logout", async (req, res, next) => {

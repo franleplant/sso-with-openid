@@ -32,7 +32,7 @@ app.use(cookieParser());
 
 app.use(auth.initialize);
 app.use(auth.session);
-app.use(auth.routes);
+app.use(auth.routes());
 
 app.get("/", (req: Request, res: Response) => {
   res.render("index");
