@@ -3,12 +3,7 @@ import express, { Request, Response } from "express";
 import mustacheExpress from "mustache-express";
 import cookieParser from "cookie-parser";
 
-import {
-  authInitMiddleware,
-  sessionMiddleware,
-  requireAuthMiddleware,
-  authRoutesMiddleware,
-} from "./auth";
+import * as auth from './auth'
 
 // To test the SSO we need to use two different hosts
 // because of the cookie domain (localhost cookie domain
@@ -35,15 +30,15 @@ app.set("views", __dirname + "/views");
 
 app.use(cookieParser());
 
-app.use(authInitMiddleware);
-app.use(sessionMiddleware);
-app.use(authRoutesMiddleware());
+app.use(auth.initialize);
+app.use(auth.session);
+app.use(auth.routes);
 
 app.get("/", (req: Request, res: Response) => {
   res.render("index");
 });
 
-app.get("/private", requireAuthMiddleware, (req, res) => {
+app.get("/private", auth.requireAuth, (req, res) => {
   const claims = req.session!.tokenSet.claims();
 
   res.render("private", {

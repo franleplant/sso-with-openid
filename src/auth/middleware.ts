@@ -16,7 +16,7 @@ This is a direct dependency of the rest of the auth middlewares.
 
 
  */
-export async function authInitMiddleware(
+export async function initialize(
   req: Request,
   res: Response,
   next: NextFunction
@@ -48,7 +48,7 @@ export async function authInitMiddleware(
   - refreshing the access_token if necessary
 
  */
-export async function sessionMiddleware(
+export async function session(
   req: Request,
   res: Response,
   next: NextFunction
@@ -97,7 +97,7 @@ export async function sessionMiddleware(
   This is a very primitive version, a more complex one should.
   accept params like `if unauthenticated redirect to ...`
  */
-export async function requireAuthMiddleware(
+export async function requireAuth(
   req: Request,
   res: Response,
   next: NextFunction
