@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { Issuer } from "openid-client";
-import { getAuthCookie } from "./cookie";
+import { clearSessionCookie, getSessionCookie } from "./cookie";
+import { deserialize } from "./session";
 
 export function getDomain(): string {
   return `http://${process.env.HOST}:${process.env.PORT}`;
@@ -48,15 +49,13 @@ export async function initialize(
   - refreshing the access_token if necessary
 
  */
-export async function session(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  const session = getAuthCookie(req);
-  if (!session) {
+export async function session(req: Request, res: Response, next: NextFunction) {
+  const sessionCookie = getSessionCookie(req);
+  if (!sessionCookie) {
     return next();
   }
+
+  const session = deserialize(sessionCookie);
 
   const client = req.app.authClient;
   // This is unfortunately a private method for some reason,
@@ -70,18 +69,22 @@ export async function session(
   // due to javascript weirdness this class method needs to be called this way
   // so that it is aware of its own `this`
   try {
-    const result = await validate.call(client, session.tokenSet);
+    await validate.call(client, session.tokenSet);
   } catch (err) {
     console.log("bad token signature found in auth cookie");
     return next(new Error("Bad Token in Auth Cookie!"));
   }
 
-
   if (session.tokenSet.expired()) {
-    const refreshedTokenSet = await req.app.authClient!.refresh(
-      session.tokenSet
-    );
-    session.tokenSet = refreshedTokenSet;
+    try {
+      const refreshedTokenSet = await req.app.authClient!.refresh(
+        session.tokenSet
+      );
+      session.tokenSet = refreshedTokenSet;
+    } catch (err) {
+      // this can throw when the refresh token has expired, logout completely when that happens
+      clearSessionCookie(req);
+    }
   }
 
   req.session = session;

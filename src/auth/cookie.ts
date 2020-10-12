@@ -1,6 +1,5 @@
 import { Request } from "express";
 import { TokenSet } from "openid-client";
-import { ISession, IUserInfo } from "./types";
 
 /*
 
@@ -18,35 +17,19 @@ import { ISession, IUserInfo } from "./types";
   into a session object and clearing it, no token management is done in this module.
  */
 
-const AUTH_COOKIE = "AUTH";
+const SESSION_COOKIE = "AUTH";
 
-export function setAuthCookie(
-  req: Request,
-  tokenSet: TokenSet,
-  user: IUserInfo
-): void {
-  const payload: ISession = { user, tokenSet };
-  const value = JSON.stringify(payload);
-
-  req.res?.cookie(AUTH_COOKIE, value, {
+export function setSessionCookie(req: Request, session: string): void {
+  req.res?.cookie(SESSION_COOKIE, session, {
     httpOnly: true,
     expires: new Date(new Date().getTime() + 9000000),
   });
 }
 
-export function getAuthCookie(req: Request): ISession | undefined {
-  const value = req.cookies[AUTH_COOKIE];
-  if (!value) {
-    return;
-  }
-
-  const raw = JSON.parse(value);
-  return {
-    ...raw,
-    tokenSet: new TokenSet(raw.tokenSet),
-  };
+export function getSessionCookie(req: Request): string | undefined {
+  return req.cookies[SESSION_COOKIE];
 }
 
-export function clearAuthCookie(req: Request): void {
-  req.res?.clearCookie(AUTH_COOKIE);
+export function clearSessionCookie(req: Request): void {
+  req.res?.clearCookie(SESSION_COOKIE);
 }

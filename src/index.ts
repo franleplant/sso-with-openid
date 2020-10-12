@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import mustacheExpress from "mustache-express";
 import cookieParser from "cookie-parser";
 
-import * as auth from './auth'
+import * as auth from "./auth";
 
 // To test the SSO we need to use two different hosts
 // because of the cookie domain (localhost cookie domain

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { IUserInfo } from "./types";
-import { setAuthCookie, clearAuthCookie } from "./cookie";
+import { setSessionCookie, clearSessionCookie } from "./cookie";
+import { serialize } from "./session";
 import { getDomain } from "./middleware";
 
 /*
@@ -35,7 +35,8 @@ export default function authRoutesMiddleware(): Router {
     );
     const user = await client!.userinfo(tokenSet);
 
-    setAuthCookie(req, tokenSet, user as IUserInfo);
+    const sessionCookie = serialize({ tokenSet, user });
+    setSessionCookie(req, sessionCookie);
 
     res.redirect("/private");
   });
@@ -49,7 +50,7 @@ export default function authRoutesMiddleware(): Router {
     } catch (err) {
       console.error("error revoking token", err);
     }
-    clearAuthCookie(req);
+    clearSessionCookie(req);
 
     res.redirect("/");
   });
