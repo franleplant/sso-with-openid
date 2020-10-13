@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { Issuer } from "openid-client";
-import { clearSessionCookie, getSessionCookie } from "./cookie";
-import { deserialize } from "./session";
+import {
+  clearSessionCookie,
+  getSessionCookie,
+  setSessionCookie,
+} from "./cookie";
+import { deserialize, serialize } from "./session";
 
 export function getDomain(): string {
   return `http://${process.env.HOST}:${process.env.PORT}`;
@@ -55,9 +59,21 @@ export async function session(req: Request, res: Response, next: NextFunction) {
     return next();
   }
 
+  const client = req.app.authClient;
   const session = deserialize(sessionCookie);
 
-  const client = req.app.authClient;
+  if (session.tokenSet.expired()) {
+    try {
+      const refreshedTokenSet = await client!.refresh(session.tokenSet);
+      session.tokenSet = refreshedTokenSet;
+      setSessionCookie(req, serialize(session));
+    } catch (err) {
+      // this can throw when the refresh token has expired, logout completely when that happens
+      clearSessionCookie(req);
+      return next();
+    }
+  }
+
   // This is unfortunately a private method for some reason,
   // The idea here is to use the metadata the issuer fetched like
   // encryption algorithms and public keys to validate that
@@ -73,19 +89,6 @@ export async function session(req: Request, res: Response, next: NextFunction) {
   } catch (err) {
     console.log("bad token signature found in auth cookie");
     return next(new Error("Bad Token in Auth Cookie!"));
-  }
-
-  if (session.tokenSet.expired()) {
-    try {
-      const refreshedTokenSet = await req.app.authClient!.refresh(
-        session.tokenSet
-      );
-      session.tokenSet = refreshedTokenSet;
-    } catch (err) {
-      // this can throw when the refresh token has expired, logout completely when that happens
-      clearSessionCookie(req);
-      return next();
-    }
   }
 
   req.session = session;
