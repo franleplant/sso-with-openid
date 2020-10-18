@@ -1,25 +1,11 @@
+import debugFactory from "debug";
 import { Router } from "express";
-import {generators} from 'openid-client'
 import { setSessionCookie, clearSessionCookie } from "./cookie";
 import { serialize } from "./session";
 import { getDomain } from "./middleware";
+import { serializeAuthState, deserializeAuthState } from "./state";
 
-interface IState {
-  backToPath: string;
-  bytes: string;
-}
-
-function serializeAuthState(state: Partial<IState>): string {
-  // probably you would base64 encode this
-  return JSON.stringify({
-    ...state,
-    bytes: generators.state()
-  })
-}
-
-function deserializeAuthState(value: string): IState {
-  return JSON.parse(value)
-}
+const debug = debugFactory("myapp:routes");
 
 /*
   This is a simple middleware that hosts all the routes
@@ -38,34 +24,51 @@ export default function authRoutesMiddleware(): Router {
   const STATE_COOKIE = "state";
 
   router.get("/auth/login", function (req, res, next) {
-    const backToPath = req.query.backTo as string || "/private";
-    const state = serializeAuthState({backToPath})
+    const backToPath = (req.query.backTo as string) || "/private";
+    const state = serializeAuthState({ backToPath });
     const authUrl = req.app.authClient!.authorizationUrl({
       scope: "openid email profile",
       state,
     });
 
-    res.cookie(STATE_COOKIE, state);
+    debug("setting state cookie %O", state);
+    res.cookie(STATE_COOKIE, state, {
+      // no access from javascript
+      httpOnly: true,
+      // only access from our site
+      sameSite: true,
+      // recommended when not running in localhost
+      //secure: true
+    });
+
+    debug("redirecting to %s", authUrl);
     res.redirect(authUrl);
   });
 
   router.get("/auth/callback", async (req, res, next) => {
-    const state = req.cookies[STATE_COOKIE];
-    const client = req.app.authClient;
+    debug("/auth/callback");
+    try {
+      const state = req.cookies[STATE_COOKIE];
+      const { backToPath } = deserializeAuthState(state);
+      debug("state %s %O", state, deserializeAuthState(state));
+      const client = req.app.authClient;
 
-    const params = client!.callbackParams(req);
-    const tokenSet = await client!.callback(
-      `${getDomain()}/auth/callback`,
-      params,
-      {state}
-    );
-    const user = await client!.userinfo(tokenSet);
+      const params = client!.callbackParams(req);
+      const tokenSet = await client!.callback(
+        `${getDomain()}/auth/callback`,
+        params,
+        { state }
+      );
+      const user = await client!.userinfo(tokenSet);
 
-    const sessionCookie = serialize({ tokenSet, user });
-    setSessionCookie(req, sessionCookie);
+      const sessionCookie = serialize({ tokenSet, user });
+      setSessionCookie(req, sessionCookie);
 
-    const {backToPath} = deserializeAuthState(state)
-    res.redirect(backToPath);
+      res.redirect(backToPath);
+    } catch (err) {
+      console.log("SOMETHING WENT WRONG", err);
+      return next(err);
+    }
   });
 
   //TODO

@@ -1,4 +1,5 @@
 import { TokenSet, UserinfoResponse } from "openid-client";
+import { fromBase64, toBase64 } from "./encoding";
 
 export interface ISession {
   user: UserinfoResponse;
@@ -6,11 +7,11 @@ export interface ISession {
 }
 
 export function serialize(session: ISession): string {
-  return JSON.stringify(session);
+  return toBase64(session);
 }
 
 export function deserialize(value: string): ISession {
-  const raw = JSON.parse(value);
+  const raw = fromBase64<any>(value);
   return {
     ...raw,
     tokenSet: new TokenSet(raw.tokenSet),

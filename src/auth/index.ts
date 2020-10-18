@@ -1,10 +1,9 @@
-import debugFactory from 'debug'
+import debugFactory from "debug";
 import { Issuer, custom } from "openid-client";
 
 export * from "./middleware";
 export { default as routes } from "./routes";
 export * from "./session";
-
 
 // A simple way of debugging openid-client requests
 const debug = debugFactory("myapp");
@@ -41,4 +40,3 @@ custom.setHttpOptionsDefaults({
     ],
   },
 });
-
