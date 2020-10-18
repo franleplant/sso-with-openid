@@ -3,7 +3,12 @@ import { Router } from "express";
 import { setSessionCookie, clearSessionCookie } from "./cookie";
 import { serialize } from "./session";
 import { getDomain } from "./middleware";
-import { serializeAuthState, deserializeAuthState } from "./state";
+import {
+  serializeAuthState,
+  deserializeAuthState,
+  setAuthStateCookie,
+  getAuthStateCookie,
+} from "./state";
 
 const debug = debugFactory("myapp:routes");
 
@@ -21,25 +26,18 @@ const debug = debugFactory("myapp:routes");
  */
 export default function authRoutesMiddleware(): Router {
   const router = Router();
-  const STATE_COOKIE = "state";
 
   router.get("/auth/login", function (req, res, next) {
     const backToPath = (req.query.backTo as string) || "/private";
     const state = serializeAuthState({ backToPath });
+
     const authUrl = req.app.authClient!.authorizationUrl({
       scope: "openid email profile",
       state,
     });
 
     debug("setting state cookie %O", state);
-    res.cookie(STATE_COOKIE, state, {
-      // no access from javascript
-      httpOnly: true,
-      // only access from our site
-      sameSite: true,
-      // recommended when not running in localhost
-      //secure: true
-    });
+    setAuthStateCookie(res, state);
 
     debug("redirecting to %s", authUrl);
     res.redirect(authUrl);
@@ -48,8 +46,9 @@ export default function authRoutesMiddleware(): Router {
   router.get("/auth/callback", async (req, res, next) => {
     debug("/auth/callback");
     try {
-      const state = req.cookies[STATE_COOKIE];
+      const state = getAuthStateCookie(req);
       const { backToPath } = deserializeAuthState(state);
+
       debug("state %s %O", state, deserializeAuthState(state));
       const client = req.app.authClient;
 
@@ -62,7 +61,7 @@ export default function authRoutesMiddleware(): Router {
       const user = await client!.userinfo(tokenSet);
 
       const sessionCookie = serialize({ tokenSet, user });
-      setSessionCookie(req, sessionCookie);
+      setSessionCookie(res, sessionCookie);
 
       res.redirect(backToPath);
     } catch (err) {
@@ -81,7 +80,7 @@ export default function authRoutesMiddleware(): Router {
     } catch (err) {
       console.error("error revoking token", err);
     }
-    clearSessionCookie(req);
+    clearSessionCookie(res);
 
     res.redirect("/");
   });

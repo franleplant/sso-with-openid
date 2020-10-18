@@ -1,5 +1,4 @@
-import { Request } from "express";
-import { TokenSet } from "openid-client";
+import { Request, Response } from "express";
 
 /*
 
@@ -19,8 +18,8 @@ import { TokenSet } from "openid-client";
 
 const SESSION_COOKIE = "AUTH";
 
-export function setSessionCookie(req: Request, session: string): void {
-  req.res?.cookie(SESSION_COOKIE, session, {
+export function setSessionCookie(res: Response, session: string): void {
+  res.cookie(SESSION_COOKIE, session, {
     httpOnly: true,
     expires: new Date(new Date().getTime() + 9000000),
   });
@@ -30,6 +29,6 @@ export function getSessionCookie(req: Request): string | undefined {
   return req.cookies[SESSION_COOKIE];
 }
 
-export function clearSessionCookie(req: Request): void {
-  req.res?.clearCookie(SESSION_COOKIE);
+export function clearSessionCookie(res: Response): void {
+  res.clearCookie(SESSION_COOKIE);
 }

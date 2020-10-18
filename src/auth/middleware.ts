@@ -66,10 +66,10 @@ export async function session(req: Request, res: Response, next: NextFunction) {
     try {
       const refreshedTokenSet = await client!.refresh(session.tokenSet);
       session.tokenSet = refreshedTokenSet;
-      setSessionCookie(req, serialize(session));
+      setSessionCookie(res, serialize(session));
     } catch (err) {
       // this can throw when the refresh token has expired, logout completely when that happens
-      clearSessionCookie(req);
+      clearSessionCookie(res);
       return next();
     }
   }
