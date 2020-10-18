@@ -23,10 +23,13 @@ export function deserializeAuthState(value: string): IState {
 
 export function setAuthStateCookie(res: Response, state: string): void {
   res.cookie(STATE_COOKIE, state, {
+    maxAge: 15 * 60 * 1000,
     // no access from javascript
     httpOnly: true,
     // only access from our site
-    sameSite: true,
+    // Unfortunately the cookie behavior has recently changed
+    // and so we need to do this in order for the redirects to carry on our state cookie
+    sameSite: false,
     // recommended when not running in localhost
     //secure: true
   });

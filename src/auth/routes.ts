@@ -46,10 +46,11 @@ export default function authRoutesMiddleware(): Router {
   router.get("/auth/callback", async (req, res, next) => {
     debug("/auth/callback");
     try {
+      console.log("req.cookies", req.cookies);
       const state = getAuthStateCookie(req);
+      debug("state %s", state);
       const { backToPath } = deserializeAuthState(state);
-
-      debug("state %s %O", state, deserializeAuthState(state));
+      debug("state %O", deserializeAuthState(state));
       const client = req.app.authClient;
 
       const params = client!.callbackParams(req);
@@ -70,7 +71,8 @@ export default function authRoutesMiddleware(): Router {
     }
   });
 
-  //TODO
+  // This is a logout mostly local to our app, that means
+  // that your session with the identity provider will be ketp intact.
   router.get("/auth/logout", async (req, res, next) => {
     const client = req.app.authClient;
     const tokenSet = req.session?.tokenSet;
@@ -78,11 +80,23 @@ export default function authRoutesMiddleware(): Router {
     try {
       await client!.revoke(tokenSet!.access_token!);
     } catch (err) {
-      console.error("error revoking token", err);
+      console.error("error revoking access_token", err);
     }
     clearSessionCookie(res);
 
     res.redirect("/");
+  });
+
+  // This does not work, it looks like google doesn't provider
+  // the necessary endpoints in the Discovery doc
+  router.get("/auth/logout/sso", async (req, res, next) => {
+    const client = req.app.authClient;
+    const tokenSet = req.session?.tokenSet;
+
+    clearSessionCookie(res);
+
+    const endSessionUrl = client!.endSessionUrl();
+    res.redirect(endSessionUrl);
   });
 
   return router;
